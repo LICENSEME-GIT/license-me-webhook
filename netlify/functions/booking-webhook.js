@@ -147,21 +147,15 @@ async function sendKlaviyoEmail(formData) {
 
     console.log('Sending Klaviyo event for email:', formData.email);
 
-    // Create event to trigger the flow - CORRECTED FORMAT
+    // Simplified event format that works with Klaviyo v3
     const eventData = {
       data: {
         type: 'event',
         attributes: {
-          profile: {
+          properties: {
             $email: formData.email,
             $first_name: formData.firstName,
             $last_name: formData.lastName,
-            $phone_number: formData.phone
-          },
-          metric: {
-            name: 'Placed Order'
-          },
-          properties: {
             booking_reference: formData.bookingReference,
             course_name: 'Door Supervisor Training',
             package: formData.package,
@@ -171,9 +165,21 @@ async function sendKlaviyoEmail(formData) {
             efaw_required: formData.efawRequired,
             efaw_date: formData.efawDate || '',
             efaw_expiry_date: formData.efawExpiryDate || '',
-            payment_id: formData.paymentId,
-            first_name: formData.firstName,
-            last_name: formData.lastName
+            payment_id: formData.paymentId
+          },
+          metric: {
+            name: 'Placed Order'
+          },
+          profile: {
+            data: {
+              type: 'profile',
+              attributes: {
+                email: formData.email,
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                phone_number: formData.phone
+              }
+            }
           },
           time: new Date().toISOString()
         }
@@ -204,6 +210,5 @@ async function sendKlaviyoEmail(formData) {
 
   } catch (error) {
     console.error('❌ Klaviyo integration error:', error);
-    // Don't fail the whole function if Klaviyo fails
   }
 }
