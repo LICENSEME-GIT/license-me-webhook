@@ -35,7 +35,7 @@ exports.handler = async (event, context) => {
       // Payment completed - convert lead to contact
       zapierData = {
         ...formData,
-        recordType: 'contact', // This will be a contact
+        recordType: 'contact',
         leadStatus: 'converted',
         paymentStatus: 'paid',
         customerStatus: 'paid_customer',
@@ -46,7 +46,7 @@ exports.handler = async (event, context) => {
       // Initial form submission - create as lead
       zapierData = {
         ...formData,
-        recordType: 'lead', // This will be a lead
+        recordType: 'lead',
         leadStatus: 'unpaid',
         paymentStatus: 'pending',
         customerStatus: 'awaiting_payment',
@@ -115,42 +115,84 @@ exports.handler = async (event, context) => {
   }
 };
 
-// Function to send confirmation email via Klaviyo
+// Function to send confirmation email via Klaviyo using v3 API
 async function sendKlaviyoEmail(formData) {
   try {
-    const klaviyoData = {
-      token: process.env.KLAVIYO_API_KEY,
-      event: 'Booking Confirmed',
-      customer_properties: {
-        email: formData.email,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone: formData.phone
-      },
-      properties: {
-        booking_reference: formData.bookingReference,
-        course_name: 'Door Supervisor Training',
-        course_package: formData.package,
-        course_location: formData.location,
-        course_date: formData.courseDate,
-        total_amount: formData.totalPrice,
-        efaw_included: formData.efawRequired,
-        efaw_date: formData.efawDate || '',
-        payment_id: formData.paymentId
+    const klaviyoPrivateKey = process.env.KLAVIYO_API_KEY;
+    
+    if (!klaviyoPrivateKey) {
+      console.error('KLAVIYO_API_KEY not found in environment variables');
+      return;
+    }
+
+    // Create or update profile first
+    const profileData = {
+      data: {
+        type: 'profile',
+        attributes: {
+          email: formData.email,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone_number: formData.phone,
+          properties: {
+            booking_reference: formData.bookingReference,
+            course_package: formData.package,
+            course_location: formData.location
+          }
+        }
       }
     };
 
-    const klaviyoResponse = await fetch('https://a.klaviyo.com/api/track', {
+    // Create event to trigger the flow
+    const eventData = {
+      data: {
+        type: 'event',
+        attributes: {
+          profile: {
+            email: formData.email
+          },
+          metric: {
+            name: 'Booking Confirmed'
+          },
+          properties: {
+            booking_reference: formData.bookingReference,
+            course_name: 'Door Supervisor Training',
+            package: formData.package,
+            location: formData.location,
+            course_date: formData.courseDate,
+            total_price: formData.totalPrice,
+            efaw_required: formData.efawRequired,
+            efaw_date: formData.efawDate || '',
+            efaw_expiry_date: formData.efawExpiryDate || '',
+            payment_id: formData.paymentId,
+            first_name: formData.firstName,
+            last_name: formData.lastName
+          },
+          time: new Date().toISOString()
+        }
+      }
+    };
+
+    // Send event to Klaviyo
+    const eventResponse = await fetch('https://a.klaviyo.com/api/events/', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Authorization': `Klaviyo-API-Key ${klaviyoPrivateKey}`,
+        'Content-Type': 'application/json',
+        'revision': '2024-10-15'
       },
-      body: JSON.stringify(klaviyoData)
+      body: JSON.stringify(eventData)
     });
 
-    console.log('Klaviyo email triggered:', klaviyoResponse.status);
+    if (eventResponse.ok) {
+      console.log('Klaviyo event sent successfully:', eventResponse.status);
+    } else {
+      const errorText = await eventResponse.text();
+      console.error('Klaviyo event failed:', eventResponse.status, errorText);
+    }
+
   } catch (error) {
-    console.error('Klaviyo email failed:', error);
-    // Don't fail the whole function if email fails
+    console.error('Klaviyo integration error:', error);
+    // Don't fail the whole function if Klaviyo fails
   }
 }
