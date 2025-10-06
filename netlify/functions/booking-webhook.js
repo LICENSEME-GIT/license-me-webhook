@@ -24,10 +24,20 @@ exports.handler = async (event, context) => {
 
   try {
     const formData = JSON.parse(event.body);
-    console.log('Received booking data:', formData);
+    console.log('Received booking data:', JSON.stringify(formData, null, 2));
 
     // Determine if this is a payment update or initial form submission
     const isPaymentUpdate = formData.paymentId || formData.paymentStatus === 'completed';
+    
+    // CRITICAL: Ensure email is always present
+    if (!formData.email) {
+      console.error('ERROR: Email field is missing from form data');
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Email is required' })
+      };
+    }
     
     let zapierData;
     
@@ -35,6 +45,7 @@ exports.handler = async (event, context) => {
       // Payment completed - convert lead to contact
       zapierData = {
         ...formData,
+        email: formData.email, // Explicitly include email
         recordType: 'contact',
         leadStatus: 'converted',
         paymentStatus: 'paid',
@@ -46,6 +57,7 @@ exports.handler = async (event, context) => {
       // Initial form submission - create as lead
       zapierData = {
         ...formData,
+        email: formData.email, // Explicitly include email
         recordType: 'lead',
         leadStatus: 'unpaid',
         paymentStatus: 'pending',
@@ -53,6 +65,8 @@ exports.handler = async (event, context) => {
         lifecycle_stage: 'lead'
       };
     }
+
+    console.log('Sending to Zapier:', JSON.stringify(zapierData, null, 2));
 
     // Send to your Zapier webhook
     const zapierUrl = 'https://hooks.zapier.com/hooks/catch/24659449/umey0fe/';
@@ -76,6 +90,7 @@ exports.handler = async (event, context) => {
     if (response.ok) {
       // If payment was completed, also trigger Klaviyo email
       if (isPaymentUpdate && formData.paymentStatus === 'completed') {
+        console.log('Triggering Klaviyo email for:', formData.email);
         await sendKlaviyoEmail(formData);
       }
 
@@ -125,23 +140,12 @@ async function sendKlaviyoEmail(formData) {
       return;
     }
 
-    // Create or update profile first
-    const profileData = {
-      data: {
-        type: 'profile',
-        attributes: {
-          email: formData.email,
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone_number: formData.phone,
-          properties: {
-            booking_reference: formData.bookingReference,
-            course_package: formData.package,
-            course_location: formData.location
-          }
-        }
-      }
-    };
+    if (!formData.email) {
+      console.error('Cannot send Klaviyo email: email is missing from formData');
+      return;
+    }
+
+    console.log('Sending Klaviyo event for email:', formData.email);
 
     // Create event to trigger the flow
     const eventData = {
@@ -149,7 +153,10 @@ async function sendKlaviyoEmail(formData) {
         type: 'event',
         attributes: {
           profile: {
-            email: formData.email
+            email: formData.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone_number: formData.phone
           },
           metric: {
             name: 'Booking Confirmed'
@@ -173,6 +180,8 @@ async function sendKlaviyoEmail(formData) {
       }
     };
 
+    console.log('Klaviyo event data:', JSON.stringify(eventData, null, 2));
+
     // Send event to Klaviyo
     const eventResponse = await fetch('https://a.klaviyo.com/api/events/', {
       method: 'POST',
@@ -185,14 +194,16 @@ async function sendKlaviyoEmail(formData) {
     });
 
     if (eventResponse.ok) {
-      console.log('Klaviyo event sent successfully:', eventResponse.status);
+      console.log('✅ Klaviyo event sent successfully:', eventResponse.status);
+      const responseData = await eventResponse.text();
+      console.log('Klaviyo response:', responseData);
     } else {
       const errorText = await eventResponse.text();
-      console.error('Klaviyo event failed:', eventResponse.status, errorText);
+      console.error('❌ Klaviyo event failed:', eventResponse.status, errorText);
     }
 
   } catch (error) {
-    console.error('Klaviyo integration error:', error);
+    console.error('❌ Klaviyo integration error:', error);
     // Don't fail the whole function if Klaviyo fails
   }
 }
