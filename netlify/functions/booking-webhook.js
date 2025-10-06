@@ -147,16 +147,16 @@ async function sendKlaviyoEmail(formData) {
 
     console.log('Sending Klaviyo event for email:', formData.email);
 
-    // Create event to trigger the flow
+    // Create event to trigger the flow - CORRECTED FORMAT
     const eventData = {
       data: {
         type: 'event',
         attributes: {
           profile: {
-            email: formData.email,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone_number: formData.phone
+            $email: formData.email,
+            $first_name: formData.firstName,
+            $last_name: formData.lastName,
+            $phone_number: formData.phone
           },
           metric: {
             name: 'Placed Order'
