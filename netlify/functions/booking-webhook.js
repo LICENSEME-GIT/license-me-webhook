@@ -159,7 +159,7 @@ async function sendKlaviyoEmail(formData) {
             phone_number: formData.phone
           },
           metric: {
-            name: 'Booking Confirmed'
+            name: 'Placed Order'
           },
           properties: {
             booking_reference: formData.bookingReference,
