@@ -130,7 +130,7 @@ exports.handler = async (event, context) => {
   }
 };
 
-// Function to send confirmation email via Klaviyo using v3 API
+// Function to send confirmation email via Klaviyo using Track API
 async function sendKlaviyoEmail(formData) {
   try {
     const klaviyoPrivateKey = process.env.KLAVIYO_API_KEY;
@@ -147,65 +147,47 @@ async function sendKlaviyoEmail(formData) {
 
     console.log('Sending Klaviyo event for email:', formData.email);
 
-    // Simplified event format that works with Klaviyo v3
-    const eventData = {
-      data: {
-        type: 'event',
-        attributes: {
-          properties: {
-            $email: formData.email,
-            $first_name: formData.firstName,
-            $last_name: formData.lastName,
-            booking_reference: formData.bookingReference,
-            course_name: 'Door Supervisor Training',
-            package: formData.package,
-            location: formData.location,
-            course_date: formData.courseDate,
-            total_price: formData.totalPrice,
-            efaw_required: formData.efawRequired,
-            efaw_date: formData.efawDate || '',
-            efaw_expiry_date: formData.efawExpiryDate || '',
-            payment_id: formData.paymentId
-          },
-          metric: {
-            name: 'Placed Order'
-          },
-          profile: {
-            data: {
-              type: 'profile',
-              attributes: {
-                email: formData.email,
-                first_name: formData.firstName,
-                last_name: formData.lastName,
-                phone_number: formData.phone
-              }
-            }
-          },
-          time: new Date().toISOString()
-        }
-      }
+    // Use simpler Track API format
+    const trackData = {
+      token: klaviyoPrivateKey,
+      event: 'Placed Order',
+      customer_properties: {
+        $email: formData.email,
+        $first_name: formData.firstName,
+        $last_name: formData.lastName,
+        $phone_number: formData.phone
+      },
+      properties: {
+        booking_reference: formData.bookingReference,
+        course_name: 'Door Supervisor Training',
+        package: formData.package,
+        location: formData.location,
+        course_date: formData.courseDate,
+        total_price: formData.totalPrice,
+        efaw_required: formData.efawRequired,
+        efaw_date: formData.efawDate || '',
+        payment_id: formData.paymentId
+      },
+      time: Math.floor(Date.now() / 1000)
     };
 
-    console.log('Klaviyo event data:', JSON.stringify(eventData, null, 2));
+    console.log('Klaviyo track data:', JSON.stringify(trackData, null, 2));
 
-    // Send event to Klaviyo
-    const eventResponse = await fetch('https://a.klaviyo.com/api/events/', {
+    // Send to Track API
+    const eventResponse = await fetch('https://a.klaviyo.com/api/track', {
       method: 'POST',
       headers: {
-        'Authorization': `Klaviyo-API-Key ${klaviyoPrivateKey}`,
-        'Content-Type': 'application/json',
-        'revision': '2024-10-15'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(eventData)
+      body: JSON.stringify(trackData)
     });
 
-    if (eventResponse.ok) {
-      console.log('✅ Klaviyo event sent successfully:', eventResponse.status);
-      const responseData = await eventResponse.text();
-      console.log('Klaviyo response:', responseData);
+    const responseText = await eventResponse.text();
+    
+    if (eventResponse.ok || responseText === '1') {
+      console.log('✅ Klaviyo event sent successfully');
     } else {
-      const errorText = await eventResponse.text();
-      console.error('❌ Klaviyo event failed:', eventResponse.status, errorText);
+      console.error('❌ Klaviyo event failed:', eventResponse.status, responseText);
     }
 
   } catch (error) {
