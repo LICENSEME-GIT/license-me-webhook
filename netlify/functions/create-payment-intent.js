@@ -29,15 +29,55 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { amount, currency, bookingReference, customerEmail } = JSON.parse(event.body);
+    const { 
+      amount, 
+      currency, 
+      bookingReference, 
+      customerEmail,
+      // NEW: Receive all customer details
+      firstName,
+      lastName,
+      fullName,
+      phone,
+      fullAddress,
+      location,
+      courseDate,
+      packageType,
+      efawChoice,
+      efawRequired,
+      efawDate,
+      totalPrice
+    } = JSON.parse(event.body);
 
-    // Create payment intent
+    // Create payment intent with COMPLETE metadata
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount, // Amount in pence/cents
       currency: currency,
       metadata: {
+        // Booking reference
         booking_reference: bookingReference,
-        customer_email: customerEmail
+        
+        // Customer details
+        customer_email: customerEmail,
+        first_name: firstName || '',
+        last_name: lastName || '',
+        full_name: fullName || '',
+        phone: phone || '',
+        full_address: fullAddress || '',
+        
+        // Course details
+        course_location: location || '',
+        course_date: courseDate || '',
+        package: packageType || '',
+        
+        // EFAW details
+        efaw_choice: efawChoice || '',
+        efaw_required: efawRequired ? 'Yes' : 'No',
+        efaw_date: efawDate || '',
+        
+        // Pricing
+        total_price: totalPrice || '',
+        base_price: (amount / 100).toFixed(2)
       },
       automatic_payment_methods: {
         enabled: true,
