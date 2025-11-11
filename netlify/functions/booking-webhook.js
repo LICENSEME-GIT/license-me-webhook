@@ -162,6 +162,8 @@ async function sendKlaviyoEmail(formData) {
         course_name: 'Door Supervisor Training',
         package: formData.package,
         location: formData.location,
+        venue_name: formData.venueName || '',           // ⭐ ADDED
+        venue_address: formData.venueAddress || '',     // ⭐ ADDED
         course_date: formData.courseDate,
         total_price: formData.totalPrice,
         efaw_required: formData.efawRequired,
