@@ -41,6 +41,8 @@ exports.handler = async (event, context) => {
       phone,
       fullAddress,
       location,
+      venueName,
+      venueAddress,
       courseDate,
       packageType,
       efawChoice,
@@ -67,6 +69,8 @@ exports.handler = async (event, context) => {
         
         // Course details
         course_location: location || '',
+        venue_name: venueName || '',
+        venue_address: venueAddress || '',
         course_date: courseDate || '',
         package: packageType || '',
         
