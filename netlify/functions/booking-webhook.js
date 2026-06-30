@@ -1,6 +1,6 @@
 exports.handler = async (event, context) => {
   const headers = {
-    'Access-Control-Allow-Origin': 'https://security-training-hub',
+    'Access-Control-Allow-Origin': 'https://security-training-hub.co.uk',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
