@@ -75,7 +75,7 @@ exports.handler = async (event, context) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'License-Me-Booking-Webhook/1.0'
+        'User-Agent': 'Security-Training-Hub-Booking-Webhook/1.0'
       },
       body: JSON.stringify(zapierData)
     });
